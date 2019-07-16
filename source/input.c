@@ -680,6 +680,13 @@ int input_read_parameters(
 
   /** - Omega_0_ur (ultra-relativistic species / massless neutrino) */
 
+  // /* bananbred */
+  // class_call(parser_read_double(pfc,"alpha_x",&param1,&flag1,errmsg),
+  //            errmsg,
+  //            errmsg);
+  // if (flag1 == _TRUE_)
+  //   pba->alpha_x = param1;
+
   /* (a) try to read N_ur */
   class_call(parser_read_double(pfc,"N_ur",&param1,&flag1,errmsg),
              errmsg,
@@ -2964,6 +2971,8 @@ int input_default_params(
   pba->deg_ncdm = NULL;
   pba->ncdm_psd_parameters = NULL;
   pba->ncdm_psd_files = NULL;
+
+  /* pba->alpha_x = 0; /* bananbred */
 
   pba->Omega0_scf = 0.; /* Scalar field defaults */
   pba->attractor_ic_scf = _TRUE_;

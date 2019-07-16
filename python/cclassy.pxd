@@ -64,6 +64,7 @@ cdef extern from "class.h":
         double Omega0_dcdmdr
         double Omega0_scf
         double Omega0_k
+        #double alpha_x bananbred
         int bt_size
 
     cdef struct thermo:

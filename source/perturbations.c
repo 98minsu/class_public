@@ -5126,6 +5126,7 @@ int perturb_einstein(
   double k2,a,a2,a_prime_over_a;
   double s2_squared;
   double shear_g = 0.;
+  // double alpha_x; /* for exercise, delete later bananbred
 
   /** - define wavenumber and scale factor related quantities */
 
@@ -5134,6 +5135,7 @@ int perturb_einstein(
   a2 = a * a;
   a_prime_over_a = ppw->pvecback[pba->index_bg_H]*a;
   s2_squared = 1.-3.*pba->K/k2;
+  // alpha_x = pba->alpha_x; /* bananbred
 
   /** - sum up perturbations from all species */
   class_call(perturb_total_stress_energy(ppr,pba,pth,ppt,index_md,k,y,ppw),
@@ -5184,7 +5186,7 @@ int perturb_einstein(
 
       /* first equation involving total density fluctuation */
       ppw->pvecmetric[ppw->index_mt_h_prime] =
-        ( k2 * s2_squared * y[ppw->pv->index_pt_eta] + 1.5 * a2 * ppw->delta_rho)/(0.5*a_prime_over_a);  /* h' */
+        ( k2 * s2_squared * y[ppw->pv->index_pt_eta] + 1.5 * a2 *  ppw->delta_rho)/(0.5*a_prime_over_a);  /* h' bananbred  (1 + alpha_x * a2 * a)* */
 
       /* eventually, infer radiation streaming approximation for
          gamma and ur (this is exactly the right place to do it
