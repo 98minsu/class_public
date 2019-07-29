@@ -2111,6 +2111,7 @@ int spectra_indices(
   class_define_index(psp->index_tr_delta_g,ppt->has_source_delta_g,index_tr,1);
   class_define_index(psp->index_tr_delta_b,ppt->has_source_delta_b,index_tr,1);
   class_define_index(psp->index_tr_delta_cdm,ppt->has_source_delta_cdm,index_tr,1);
+  class_define_index(psp->index_tr_delta_icdm,ppt->has_source_delta_icdm,index_tr,1); /* mpark */
   class_define_index(psp->index_tr_delta_dcdm,ppt->has_source_delta_dcdm,index_tr,1);
   class_define_index(psp->index_tr_delta_scf,ppt->has_source_delta_scf,index_tr,1);
   class_define_index(psp->index_tr_delta_fld,ppt->has_source_delta_fld,index_tr,1);
@@ -2132,6 +2133,7 @@ int spectra_indices(
   class_define_index(psp->index_tr_theta_b,ppt->has_source_theta_b,index_tr,1);
   class_define_index(psp->index_tr_theta_cdm,ppt->has_source_theta_cdm,index_tr,1);
   class_define_index(psp->index_tr_theta_dcdm,ppt->has_source_theta_dcdm,index_tr,1);
+  class_define_index(psp->index_tr_theta_icdm,ppt->has_source_theta_icdm,index_tr,1); /* mpark */
   class_define_index(psp->index_tr_theta_scf,ppt->has_source_theta_scf,index_tr,1);
   class_define_index(psp->index_tr_theta_fld,ppt->has_source_theta_fld,index_tr,1);
   class_define_index(psp->index_tr_theta_ur,ppt->has_source_theta_ur,index_tr,1);
@@ -3642,6 +3644,44 @@ int spectra_matter_transfers(
 
         }
 
+
+        /* T_icdm(k,tau) mpark */
+
+        if (pba->has_icdm == _TRUE_) {
+
+          rho_i = pvecback_sp_long[pba->index_bg_rho_icdm];
+
+          if (ppt->has_source_delta_icdm == _TRUE_) {
+
+            delta_i = ppt->sources[index_md]
+              [index_ic * ppt->tp_size[index_md] + ppt->index_tp_delta_icdm]
+              [(index_tau-psp->ln_tau_size+ppt->tau_size) * ppt->k_size[index_md] + index_k];
+
+            psp->matter_transfer[((index_tau*psp->ln_k_size + index_k) * psp->ic_size[index_md] + index_ic) * psp->tr_size + psp->index_tr_delta_icdm] = delta_i;
+
+            delta_rho_tot += rho_i * delta_i;
+
+          }
+
+          rho_tot += rho_i;
+
+          if (ppt->has_source_theta_icdm == _TRUE_) {
+
+            theta_i = ppt->sources[index_md]
+              [index_ic * ppt->tp_size[index_md] + ppt->index_tp_theta_icdm]
+              [(index_tau-psp->ln_tau_size+ppt->tau_size) * ppt->k_size[index_md] + index_k];
+
+            psp->matter_transfer[((index_tau*psp->ln_k_size + index_k) * psp->ic_size[index_md] + index_ic) * psp->tr_size + psp->index_tr_theta_icdm] = theta_i;
+
+            rho_plus_p_theta_tot += rho_i * theta_i;
+
+          }
+
+          rho_plus_p_tot += rho_i;
+
+        }
+
+
         /* T_dcdm(k,tau) */
 
         if (pba->has_dcdm == _TRUE_) {
@@ -3995,6 +4035,7 @@ int spectra_output_tk_titles(struct background *pba,
         }
       }
       class_store_columntitle(titles,"d_dcdm",pba->has_dcdm);
+      class_store_columntitle(titles,"d_icdm",pba->has_icdm); /* mpark */
       class_store_columntitle(titles,"d_dr",pba->has_dr);
       class_store_columntitle(titles,"d_scf",pba->has_scf);
       class_store_columntitle(titles,"d_tot",_TRUE_);
@@ -4019,6 +4060,7 @@ int spectra_output_tk_titles(struct background *pba,
         }
       }
       class_store_columntitle(titles,"t_dcdm",pba->has_dcdm);
+      class_store_columntitle(titles,"t_icdm",pba->has_icdm); /* mpark */
       class_store_columntitle(titles,"t_dr",pba->has_dr);
       class_store_columntitle(titles,"t__scf",pba->has_scf);
       class_store_columntitle(titles,"t_tot",_TRUE_);
@@ -4120,6 +4162,7 @@ int spectra_output_tk_data(
           class_store_double(dataptr,tk[psp->index_tr_delta_g],ppt->has_source_delta_g,storeidx);
           class_store_double(dataptr,tk[psp->index_tr_delta_b],ppt->has_source_delta_b,storeidx);
           class_store_double(dataptr,tk[psp->index_tr_delta_cdm],ppt->has_source_delta_cdm,storeidx);
+          class_store_double(dataptr,tk[psp->index_tr_delta_icdm],ppt->has_source_delta_icdm,storeidx); /* mpark */
           class_store_double(dataptr,tk[psp->index_tr_delta_fld],ppt->has_source_delta_fld,storeidx);
           class_store_double(dataptr,tk[psp->index_tr_delta_ur],ppt->has_source_delta_ur,storeidx);
           if (pba->has_ncdm == _TRUE_){
@@ -4144,6 +4187,7 @@ int spectra_output_tk_data(
           class_store_double(dataptr,tk[psp->index_tr_theta_g],ppt->has_source_theta_g,storeidx);
           class_store_double(dataptr,tk[psp->index_tr_theta_b],ppt->has_source_theta_b,storeidx);
           class_store_double(dataptr,tk[psp->index_tr_theta_cdm],ppt->has_source_theta_cdm,storeidx);
+          class_store_double(dataptr,tk[psp->index_tr_theta_icdm],ppt->has_source_theta_icdm,storeidx); /* mpark */
           class_store_double(dataptr,tk[psp->index_tr_theta_fld],ppt->has_source_theta_fld,storeidx);
           class_store_double(dataptr,tk[psp->index_tr_theta_ur],ppt->has_source_theta_ur,storeidx);
           if (pba->has_ncdm == _TRUE_){

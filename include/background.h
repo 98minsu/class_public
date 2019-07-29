@@ -53,6 +53,9 @@ struct background
 
   double Omega0_cdm; /**< \f$ \Omega_{0 cdm} \f$: cold dark matter */
 
+  double Omega0_icdm; /**< \f$ \Omega_{0 icdm} \f$: interacting cold dark matter mpark */
+
+
   double Omega0_lambda; /**< \f$ \Omega_{0_\Lambda} \f$: cosmological constant */
 
   double Omega0_fld; /**< \f$ \Omega_{0 de} \f$: fluid */
@@ -97,6 +100,13 @@ struct background
   //double scf_alpha;  /**< \f$ \alpha \f$ : Albrecht-Skordis polynomial slope */
   //double scf_B; /**< \f$ \alpha \f$ : Albrecht-Skordis field shift */
   //double scf_A; /**< \f$ \alpha \f$ : Albrecht-Skordis offset */
+
+  /* dmde parameters mpark */
+  double * dmde_parameters;  /**< list of parameters describing the dmde interaction */
+  int dmde_parameters_size;  /**< size of dmde_parameters */
+  short int_dmde;   /**< whether dmde interaction happens */
+
+  short has_icdm;   /**< whether dmde interaction happens */
 
   double Omega0_k; /**< \f$ \Omega_{0_k} \f$: curvature contribution */
 
@@ -175,6 +185,7 @@ struct background
   int index_bg_rho_g;         /**< photon density */
   int index_bg_rho_b;         /**< baryon density */
   int index_bg_rho_cdm;       /**< cdm density */
+  int index_bg_rho_icdm;       /**< cdm density */
   int index_bg_rho_lambda;    /**< cosmological constant density */
   int index_bg_rho_fld;       /**< fluid density */
   int index_bg_w_fld;         /**< fluid equation of state */
@@ -189,6 +200,11 @@ struct background
   int index_bg_ddV_scf;       /**< scalar field potential second derivative V'' */
   int index_bg_rho_scf;       /**< scalar field energy density */
   int index_bg_p_scf;         /**< scalar field pressure */
+
+  /* mpark allocating indices for beta */
+  int index_bg_beta;         /**< beta */
+  int index_bg_dbeta;        /**< beta' */
+  int index_bg_ddbeta;       /**< beta'' */
 
   int index_bg_rho_ncdm1;     /**< density of first ncdm species (others contiguous) */
   int index_bg_p_ncdm1;       /**< pressure of first ncdm species (others contiguous) */
@@ -522,6 +538,23 @@ extern "C" {
                  struct background *pba,
                  double phi
                  );
+                 /* mpark */
+
+   double beta(
+                struct background *pba,
+                double phi
+                );
+
+   double dbeta(
+     struct background *pba,
+     double phi
+     );
+
+   double ddbeta(
+                  struct background *pba,
+                  double phi
+                  );
+
 
   /** Coupling between scalar field and matter **/
   double Q_scf(

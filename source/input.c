@@ -766,6 +766,60 @@ int input_read_parameters(
 
   Omega_tot += pba->Omega0_cdm;
 
+
+
+
+
+  /* mpark reading dmde parameters conditional on int_dmde */
+  class_call(parser_read_string(pfc,
+                                "int_dmde",
+                                &string1,
+                                &flag1,
+                                errmsg),
+              errmsg,
+              errmsg);
+
+  if (flag1 == _TRUE_){
+    if((strstr(string1,"y") != NULL) || (strstr(string1,"Y") != NULL)){
+      pba->int_dmde = _TRUE_;
+    }
+    else{
+      pba->int_dmde = _FALSE_;
+    }
+  }
+
+
+  if (pba->int_dmde == _TRUE_) {
+    class_call(parser_read_list_of_doubles(pfc,
+                                           "dmde_parameters",
+                                           &(pba->dmde_parameters_size),
+                                           &(pba->dmde_parameters),
+                                           &flag1,
+                                           errmsg),
+               errmsg,errmsg);
+
+     /** - Omega_0_icdm (interacting CDM) */
+   class_call(parser_read_double(pfc,"Omega_icdm",&param1,&flag1,errmsg),
+              errmsg,
+              errmsg);
+   class_call(parser_read_double(pfc,"omega_icdm",&param2,&flag2,errmsg),
+              errmsg,
+              errmsg);
+   class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)),
+              errmsg,
+              "In input file, you can only enter one of Omega_icdm or omega_icdm, choose one");
+   if (flag1 == _TRUE_)
+     pba->Omega0_icdm = param1;
+   if (flag2 == _TRUE_)
+     pba->Omega0_icdm = param2/pba->h/pba->h;
+
+   Omega_tot += pba->Omega0_icdm;
+
+  }
+
+
+
+
   /** - Omega_0_dcdmdr (DCDM) */
   class_call(parser_read_double(pfc,"Omega_dcdmdr",&param1,&flag1,errmsg),
              errmsg,
@@ -1121,6 +1175,8 @@ int input_read_parameters(
         pba->phi_prime_ini_scf = pba->scf_parameters[pba->scf_parameters_size-1];
       }
     }
+
+
   }
 
   /** (b) assign values to thermodynamics cosmological parameters */
@@ -2983,10 +3039,18 @@ int input_default_params(
   pba->phi_ini_scf = 1;
   pba->phi_prime_ini_scf = 1;
 
+
+  /* mpark default dmde */
+  pba->int_dmde = _FALSE_;
+  pba->dmde_parameters = NULL;
+  pba->dmde_parameters_size = 0;
+  pba->Omega0_icdm = 0.;
+
+
   pba->Omega0_k = 0.;
   pba->K = 0.;
   pba->sgnK = 0;
-  pba->Omega0_lambda = 1.-pba->Omega0_k-pba->Omega0_g-pba->Omega0_ur-pba->Omega0_b-pba->Omega0_cdm-pba->Omega0_ncdm_tot-pba->Omega0_dcdmdr;
+  pba->Omega0_lambda = 1.-pba->Omega0_k-pba->Omega0_g-pba->Omega0_ur-pba->Omega0_b-pba->Omega0_cdm-pba->Omega0_ncdm_tot-pba->Omega0_dcdmdr-pba->Omega0_icdm;
   pba->Omega0_fld = 0.;
   pba->a_today = 1.;
   pba->use_ppf = _TRUE_;
@@ -3903,7 +3967,7 @@ int input_get_guess(double *xguess,
       ba.H0 = ba.h *  1.e5 / _c_;
       break;
     case Omega_dcdmdr:
-      Omega_M = ba.Omega0_cdm+ba.Omega0_dcdmdr+ba.Omega0_b;
+      Omega_M = ba.Omega0_cdm+ba.Omega0_icdm+ba.Omega0_dcdmdr+ba.Omega0_b;
       /* This formula is exact in a Matter + Lambda Universe, but only
          for Omega_dcdm, not the combined.
          sqrt_one_minus_M = sqrt(1.0 - Omega_M);
@@ -3966,7 +4030,7 @@ int input_get_guess(double *xguess,
           Omega_ini_dcdm -> Omega_dcdmdr and
           omega_ini_dcdm -> omega_dcdmdr */
       Omega0_dcdmdr *=pfzw->target_value[index_guess];
-      Omega_M = ba.Omega0_cdm+Omega0_dcdmdr+ba.Omega0_b;
+      Omega_M = ba.Omega0_cdm+ba.Omega0_icdm+Omega0_dcdmdr+ba.Omega0_b;
       gamma = ba.Gamma_dcdm/ba.H0;
       if (gamma < 1)
         a_decay = 1.0;

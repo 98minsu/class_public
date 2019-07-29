@@ -339,6 +339,14 @@ int background_functions(
     pvecback[pba->index_bg_ddV_scf] = ddV_scf(pba,phi); // ddV_scf(pba,phi); //potential'' as function of phi
     pvecback[pba->index_bg_rho_scf] = (phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3.; // energy of the scalar field. The field units are set automatically by setting the initial conditions
     pvecback[pba->index_bg_p_scf] =(phi_prime*phi_prime/(2*a*a) - V_scf(pba,phi))/3.; // pressure of the scalar field
+
+    if (pba->int_dmde == _TRUE_) { /*mpark changes to scalar field contrib with dmde, and updating beta values */
+      pvecback[pba->index_bg_p_scf] += (pba->dmde_parameters[0]*phi_prime/a)/3.;
+      pvecback[pba->index_bg_beta] = beta(pba,phi); // beta(pba,phi); //beta as function of phi
+      pvecback[pba->index_bg_dbeta] = dbeta(pba,phi); // dbeta(pba,phi); //beta' as function of phi
+      pvecback[pba->index_bg_ddbeta] = ddbeta(pba,phi); // ddbeta(pba,phi); //beta'' as function of phi
+    }
+
     rho_tot += pvecback[pba->index_bg_rho_scf];
     p_tot += pvecback[pba->index_bg_p_scf];
     //divide relativistic & nonrelativistic (not very meaningful for oscillatory models)
@@ -346,6 +354,19 @@ int background_functions(
     rho_m += pvecback[pba->index_bg_rho_scf] - 3.* pvecback[pba->index_bg_p_scf]; //the rest contributes matter
     //printf(" a= %e, Omega_scf = %f, \n ",a_rel, pvecback[pba->index_bg_rho_scf]/rho_tot );
   }
+
+
+  /* icdm mpark */
+  if (pba->has_icdm == _TRUE_) {
+    pvecback[pba->index_bg_rho_icdm] = pba->Omega0_icdm * pow(pba->H0,2) / pow(a_rel,3);
+    if (pba->int_dmde == _TRUE_) {
+      pvecback[pba->index_bg_rho_icdm] *= exp(beta(pba, phi)); /* mpark phi amplifying dm */
+    }
+    rho_tot += pvecback[pba->index_bg_rho_icdm];
+    p_tot += 0.;
+    rho_m += pvecback[pba->index_bg_rho_icdm];
+  }
+
 
   /* ncdm */
   if (pba->has_ncdm == _TRUE_) {
@@ -498,6 +519,7 @@ int background_w_fld(
     Omega_r = pba->Omega0_g * (1. + 3.046 * 7./8.*pow(4./11.,4./3.)); // assumes LambdaCDM + eventually massive neutrinos so light that they are relativistic at equality; needs to be generalised later on.
     Omega_m = pba->Omega0_b;
     if (pba->has_cdm == _TRUE_) Omega_m += pba->Omega0_cdm;
+    if (pba->has_icdm == _TRUE_) Omega_m += pba->Omega0_icdm; /* mpark*/
     if (pba->has_dcdm == _TRUE_)
         class_stop(pba->error_message,"Early Dark Energy not compatible with decaying Dark Matter because we omitted to code the calculation of a_eq in that case, but it would not be difficult to add it if necessary, should be a matter of 5 minutes");
     a_eq = Omega_r/Omega_m; // assumes a flat universe with a=1 today
@@ -827,6 +849,7 @@ int background_indices(
   /** - initialize all flags: which species are present? */
 
   pba->has_cdm = _FALSE_;
+  pba->has_icdm = _FALSE_; /* mpark*/
   pba->has_ncdm = _FALSE_;
   pba->has_dcdm = _FALSE_;
   pba->has_dr = _FALSE_;
@@ -838,6 +861,9 @@ int background_indices(
 
   if (pba->Omega0_cdm != 0.)
     pba->has_cdm = _TRUE_;
+
+  if (pba->Omega0_icdm != 0.) /*mpark */
+    pba->has_icdm = _TRUE_;
 
   if (pba->Omega0_ncdm_tot != 0.)
     pba->has_ncdm = _TRUE_;
@@ -886,6 +912,10 @@ int background_indices(
   /* - index for rho_cdm */
   class_define_index(pba->index_bg_rho_cdm,pba->has_cdm,index_bg,1);
 
+
+  /* - mpark index for rho_icdm */
+  class_define_index(pba->index_bg_rho_icdm,pba->has_icdm,index_bg,1);
+
   /* - indices for ncdm. We only define the indices for ncdm1
      (density, pressure, pseudo-pressure), the other ncdm indices
      are contiguous */
@@ -907,6 +937,12 @@ int background_indices(
   class_define_index(pba->index_bg_ddV_scf,pba->has_scf,index_bg,1);
   class_define_index(pba->index_bg_rho_scf,pba->has_scf,index_bg,1);
   class_define_index(pba->index_bg_p_scf,pba->has_scf,index_bg,1);
+
+  /* mpark */
+  class_define_index(pba->index_bg_beta,pba->int_dmde,index_bg,1);
+  class_define_index(pba->index_bg_dbeta,pba->int_dmde,index_bg,1);
+  class_define_index(pba->index_bg_ddbeta,pba->int_dmde,index_bg,1);
+
 
   /* - index for Lambda */
   class_define_index(pba->index_bg_rho_lambda,pba->has_lambda,index_bg,1);
@@ -2167,6 +2203,7 @@ int background_output_titles(struct background * pba,
   class_store_columntitle(titles,"(.)rho_g",_TRUE_);
   class_store_columntitle(titles,"(.)rho_b",_TRUE_);
   class_store_columntitle(titles,"(.)rho_cdm",pba->has_cdm);
+  class_store_columntitle(titles,"(.)rho_icdm",pba->has_icdm); /*mpark*/
   if (pba->has_ncdm == _TRUE_){
     for (n=0; n<pba->N_ncdm; n++){
       sprintf(tmp,"(.)rho_ncdm[%d]",n);
@@ -2221,6 +2258,7 @@ int background_output_data(
     class_store_double(dataptr,pvecback[pba->index_bg_rho_g],_TRUE_,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_b],_TRUE_,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_cdm],pba->has_cdm,storeidx);
+    class_store_double(dataptr,pvecback[pba->index_bg_rho_icdm],pba->has_icdm,storeidx); /*mpark adding icdm */
     if (pba->has_ncdm == _TRUE_){
       for (n=0; n<pba->N_ncdm; n++){
         class_store_double(dataptr,pvecback[pba->index_bg_rho_ncdm1+n],_TRUE_,storeidx);
@@ -2242,6 +2280,12 @@ int background_output_data(
     class_store_double(dataptr,pvecback[pba->index_bg_V_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_dV_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_ddV_scf],pba->has_scf,storeidx);
+
+    /* mpark */
+    class_store_double(dataptr,pvecback[pba->index_bg_beta],pba->int_dmde,storeidx);
+    class_store_double(dataptr,pvecback[pba->index_bg_dbeta],pba->int_dmde,storeidx);
+    class_store_double(dataptr,pvecback[pba->index_bg_ddbeta],pba->int_dmde,storeidx);
+
 
     class_store_double(dataptr,pvecback[pba->index_bg_D],_TRUE_,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_f],_TRUE_,storeidx);
@@ -2323,6 +2367,8 @@ int background_derivs(
   rho_M = pvecback[pba->index_bg_rho_b];
   if (pba->has_cdm)
     rho_M += pvecback[pba->index_bg_rho_cdm];
+  if (pba->has_icdm)
+    rho_M += pvecback[pba->index_bg_rho_icdm]; /* mpark */
   dy[pba->index_bi_D] = y[pba->index_bi_D_prime];
   dy[pba->index_bi_D_prime] = -a*H*y[pba->index_bi_D_prime] + 1.5*a*a*rho_M*y[pba->index_bi_D];
 
@@ -2349,6 +2395,12 @@ int background_derivs(
     dy[pba->index_bi_phi_prime_scf] = - y[pba->index_bi_a]*
       (2*pvecback[pba->index_bg_H]*y[pba->index_bi_phi_prime_scf]
        + y[pba->index_bi_a]*dV_scf(pba,y[pba->index_bi_phi_scf])) ;
+
+    if (pba->int_dmde == _TRUE_) {
+      dy[pba->index_bi_phi_prime_scf] -= y[pba->index_bi_a]*
+        y[pba->index_bi_a]*dbeta(pba,y[pba->index_bi_phi_scf])*pvecback[pba->index_bg_rho_icdm] /*adding dmde contribution  mpark*/
+        + 3*pba->dmde_parameters[0]*dy[pba->index_bi_a];
+    }
   }
 
 
@@ -2479,4 +2531,41 @@ double ddV_scf(
                struct background *pba,
                double phi) {
   return ddV_e_scf(pba,phi)*V_p_scf(pba,phi) + 2*dV_e_scf(pba,phi)*dV_p_scf(pba,phi) + V_e_scf(pba,phi)*ddV_p_scf(pba,phi);
+}
+
+
+/* mpark beta dbeta and ddbeta where beta(phi) is the current phi dependence*/
+double beta(
+                struct background *pba,
+                double phi) {
+
+  double beta1 = pba->dmde_parameters[1];
+  double beta2 = pba->dmde_parameters[2];
+  double beta3 = pba->dmde_parameters[3];
+  double beta4 = pba->dmde_parameters[4];
+
+  return  beta1*phi + beta2*phi*phi + beta3*phi*phi*phi + beta4*phi*phi*phi*phi;
+}
+
+double dbeta(
+                struct background *pba,
+                double phi) {
+
+  double beta1 = pba->dmde_parameters[1];
+  double beta2 = pba->dmde_parameters[2];
+  double beta3 = pba->dmde_parameters[3];
+  double beta4 = pba->dmde_parameters[4];
+
+  return  beta1 + 2*beta2*phi + 3*beta3*phi*phi + 4*beta4*phi*phi*phi;
+}
+
+double ddbeta(
+                struct background *pba,
+                double phi) {
+
+  double beta2 = pba->dmde_parameters[2];
+  double beta3 = pba->dmde_parameters[3];
+  double beta4 = pba->dmde_parameters[4];
+
+  return  2*beta2 + 6*beta3*phi + 12*beta4*phi*phi;
 }
